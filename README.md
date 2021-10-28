@@ -13,7 +13,7 @@ You can install from: https://extensions.gnome.org/extension/4481/forge/ or down
 - Customizable shortcuts in extension preferences.
 - Some support for multi-display.
 - Tiling support per workspace
-- Works on GNOME 3.36+ and 40. X11 and Wayland.
+- Works on GNOME 3.36+ up to GNOME 41! X11 and Wayland.
 
 ## Experimental Features
 - Drag and drop tiling (NEW!)

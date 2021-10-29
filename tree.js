@@ -1348,6 +1348,7 @@ var Tree = GObject.registerClass(
             // TODO make configurable
             let alwaysRenderTab = true;
 
+            // Handle cleanup of front tab on out of focus tabbed layout container
             if (alwaysRenderTab) {
                 let conChildren = tree.getNodeByType(NODE_TYPES.CON);
                 Array.prototype.push.apply(conChildren, tree.getNodeByType(NODE_TYPES.MONITOR));
@@ -1389,6 +1390,41 @@ var Tree = GObject.registerClass(
                     }
                 });
             }
+
+            // Handle sorting of windows based on the following:
+            // Fullscreen - top
+            // Maximized
+            // Floats
+            // Windows on tabs
+            // Windows on stacks
+            // Tiled windows
+            const allWindowsActiveWorkspace = this.extWm.windowsActiveWorkspace;
+            allWindowsActiveWorkspace.sort((n1, n2) => {
+                return this.getSortIndex(n1) - this.getSortIndex(n2);
+            });
+
+            allWindowsActiveWorkspace.forEach((w) => {
+                w.nodeValue.raise();
+            });
+        }
+
+        getSortIndex(nodeWindow) {
+            if (nodeWindow.nodeValue.fullscreen) {
+                return 6;
+            }
+            if (nodeWindow.nodeValue.get_maximized() > 0 ) {
+                return 5;
+            }
+            if (nodeWindow.mode === Window.WINDOW_MODES.FLOAT) {
+                return 4;
+            }
+            if (nodeWindow.parentNode.isTabbedLayout() && !nodeWindow.backgroundTab) {
+                return 3;
+            }
+            if (nodeWindow.parentNode.isStackedLayout()) {
+                return 2;
+            }
+            return 1;
         }
 
         /**
@@ -1461,6 +1497,9 @@ var Tree = GObject.registerClass(
         resetSiblingPercent(parentNode) {
             if (!parentNode) return;
             Logger.trace(`resetting child-nodes for ${parentNode.nodeType} with id ${parentNode.nodeValue}`);
+            if (parentNode.nodeType === NODE_TYPES.CON || parentNode.nodeType === NODE_TYPES.MONITOR) {
+                parentNode.percent = 0.0;
+            }
             let children = parentNode.childNodes;
             children.forEach((n) => {
                 n.percent = 0.0;

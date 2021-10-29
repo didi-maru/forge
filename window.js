@@ -665,6 +665,11 @@ var WindowManager = GObject.registerClass(
             return workspaceWindows;
         }
 
+        get windowsActiveWorkspace() {
+            const activeWorkspace = global.workspace_manager.get_active_workspace_index();
+            return this.getWindowsOnWorkspace(activeWorkspace);
+        }
+
         determineSplitLayout() {
             // if the monitor width is less than height, the monitor could be vertical orientation;
             let monitorRect = global.display.get_monitor_geometry(global.display.get_current_monitor());
@@ -1044,37 +1049,47 @@ var WindowManager = GObject.registerClass(
                     border.show();
                 }
 
-                this._restackSrcId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
-                    windowGroup.set_child_above_sibling(border, null);
+                if (windowGroup && windowGroup.contains(border)) {
+                    windowGroup.remove_child(border);
+                    windowGroup.add_child(border);
+                }
 
-                    if (alwaysAboveActors.length > 0) {
-                        Logger.debug(`show-border: always above nodes ${alwaysAboveActors.length}`);
-                        // honor the always-top windows
-                        for (const aboveActor of alwaysAboveActors) {
-                            if (windowActor != aboveActor) {
-                                Logger.debug(`show-border: pulling down border from hierarchy`);
-                                windowGroup.set_child_below_sibling(border, aboveActor);
+                let restackEnabled = false;
+
+                if (restackEnabled) {
+                    // Re-arrange the active border against floating, make above windows
+                    this._restackSrcId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+                        windowGroup.set_child_above_sibling(border, null);
+
+                        if (alwaysAboveActors.length > 0) {
+                            Logger.debug(`show-border: always above nodes ${alwaysAboveActors.length}`);
+                            // honor the always-top windows
+                            for (const aboveActor of alwaysAboveActors) {
+                                if (windowActor != aboveActor) {
+                                    Logger.debug(`show-border: pulling down border from hierarchy`);
+                                    windowGroup.set_child_below_sibling(border, aboveActor);
+                                }
                             }
                         }
-                    }
 
-                    windowGroup.set_child_above_sibling(border, windowActor);
+                        windowGroup.set_child_above_sibling(border, windowActor);
 
-                    // Honor transient windows
-                    for (const metaWindow of this.windowsAllWorkspaces) {
-                        const parentMetaWindow = metaWindow.get_transient_for();
-                        const anotherWindowActor = metaWindow.get_compositor_private();
-                        if (!parentMetaWindow || !anotherWindowActor) continue;
+                        // Honor transient windows
+                        for (const metaWindow of this.windowsAllWorkspaces) {
+                            const parentMetaWindow = metaWindow.get_transient_for();
+                            const anotherWindowActor = metaWindow.get_compositor_private();
+                            if (!parentMetaWindow || !anotherWindowActor) continue;
 
-                        const parentWindowActor = parentMetaWindow.get_compositor_private();
-                        if (!parentWindowActor && parentWindowActor !== actor) continue;
+                            const parentWindowActor = parentMetaWindow.get_compositor_private();
+                            if (!parentWindowActor && parentWindowActor !== actor) continue;
 
-                        windowGroupset_child_below_sibling(border, anotherWindowActor);
-                    }
+                            windowGroup.set_child_below_sibling(border, anotherWindowActor);
+                        }
 
-                    this._restackSrcId = 0;
-                    return false;
-                });
+                        this._restackSrcId = 0;
+                        return false;
+                    });
+                }
             });
             Logger.trace(`show-border-focus-window`);
         }
@@ -1455,7 +1470,7 @@ var WindowManager = GObject.registerClass(
 
         floatingWindow(node) {
             if (!node) return false;
-            if (!node.nodeType === Tree.NODE_TYPES.WINDOW) return false;
+            if (node.nodeType !== Tree.NODE_TYPES.WINDOW) return false;
             if (node.mode === WINDOW_MODES.FLOAT) {
                 return true;
             }

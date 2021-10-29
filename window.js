@@ -1550,6 +1550,8 @@ var WindowManager = GObject.registerClass(
                 // For stacked and tabbed windows, append them to the parent container
                 if (parentNodeTarget.isStackedLayout()) {
                     if (!preview) {
+                        this.tree.resetSiblingPercent(focusNodeWindow.parentNode);
+                        this.tree.resetSiblingPercent(parentNodeTarget);
                         parentNodeTarget.appendChild(focusNodeWindow);
                     } else {
                         let previewHint = focusNodeWindow.previewHint;
@@ -1608,6 +1610,9 @@ var WindowManager = GObject.registerClass(
                     if (Utils.rectContainsPoint(leftRect, this.getPointer())) {
                         Logger.debug("move-pointer: point left");
                         if (!preview) {
+                            focusNodeWindow.percent = 0.0;
+                            this.tree.resetSiblingPercent(focusNodeWindow.parentNode);
+                            this.tree.resetSiblingPercent(parentNodeTarget);
                             parentNodeTarget.insertBefore(focusNodeWindow, nodeWinAtPointer);
                         } else {
                             let previewHint = focusNodeWindow.previewHint;
@@ -1625,6 +1630,9 @@ var WindowManager = GObject.registerClass(
                     } else if (Utils.rectContainsPoint(rightRect, this.getPointer())) {
                         Logger.debug("move-pointer: point right");
                         if (!preview) {
+                            focusNodeWindow.percent = 0.0;
+                            this.tree.resetSiblingPercent(focusNodeWindow.parentNode);
+                            this.tree.resetSiblingPercent(parentNodeTarget);
                             parentNodeTarget.insertBefore(focusNodeWindow, nodeWinAtPointer.nextSibling);
                         } else {
                             let previewHint = focusNodeWindow.previewHint;

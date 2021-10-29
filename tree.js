@@ -92,6 +92,8 @@ var Node = GObject.registerClass(
             this.percent = 0.0;
 
             if (this._type === NODE_TYPES.WINDOW) {
+                // Assign the frame_rect to this.rect - it will be changed later by processNode()
+                this.rect = this._data.get_frame_rect();
                 this._actor = this._data.get_compositor_private();
             }
         }
@@ -485,15 +487,12 @@ var Tree = GObject.registerClass(
          * Creates a new Node and attaches it to a parent toData.
          * Parent can be MONITOR or CON types only.
          */
-        createNode(parentObj, type, value, mode = Window.WINDOW_MODES.TILE) {
+        createNode(parentObj, type, value) {
             let parentNode = this.findNode(parentObj);
             let child;
 
             if (parentNode) {
                 child = new Node(type, value);
-
-                if (type === NODE_TYPES.WINDOW)
-                    child.mode = mode;
 
                 // Append after a window
                 if (parentNode.nodeType === NODE_TYPES.WINDOW) {
@@ -570,7 +569,7 @@ var Tree = GObject.registerClass(
 
             for (let w of sortedWindows) {
                 const nodeWin = monWsNode.getNodeByValue(w);
-                const metaRect = nodeWin.rect;
+                const metaRect = nodeWin.rect ? nodeWin.rect : w.get_frame_rect();
                 const atPointer = Utils.rectContainsPoint(metaRect, pointer);
                 Logger.debug(`At pointer ${atPointer}`);
                 if (atPointer)
@@ -1135,6 +1134,8 @@ var Tree = GObject.registerClass(
                     if (!monitorArea) return; // there is no visible child window
                     Logger.trace(`processing workarea`);
                     node.rect = monitorArea;
+                    // Assign a child.rect as initial value
+                    node.childNodes.forEach((c) => c.rect = monitorArea);
                 }
 
                 let tiledChildren = this.getTiledChildren(node.childNodes);
@@ -1172,21 +1173,16 @@ var Tree = GObject.registerClass(
                 Logger.debug(` layout: ${node.parentNode.layout}, index: ${node.index}`);
                 Logger.debug(` x: ${nodeX}, y: ${nodeY}, h: ${nodeHeight}, w: ${nodeWidth}`);
 
-                node.renderRect = this.processGap(node);
+                // Check for Workspace Tiling
+                const workspaceTiled = this.extWm.isCurrentWorkspaceTiled() || this.extWm.isActiveWindowWorkspaceTiled(metaWindow);
 
-                let workspaceTiled = this.extWm.isActiveWindowWorkspaceTiled(metaWindow);
-
-                if (!workspaceTiled) {
-                    // Floated windows should always be on top
-                    metaWindow.make_above();
-                    node.mode = Window.WINDOW_MODES.FLOAT;
-                } else {
-                    // When it is a front tab window,
-                    // do not remove the make_above attribute
-                    if (node.backgroundTab)
-                        metaWindow.unmake_above();
+                if (workspaceTiled) {
                     node.mode = Window.WINDOW_MODES.TILE;
+                } else {
+                    node.mode = Window.WINDOW_MODES.FLOAT;
                 }
+
+                node.renderRect = this.processGap(node);
             }
         }
 

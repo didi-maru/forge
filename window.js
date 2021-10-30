@@ -1491,6 +1491,10 @@ var WindowManager = GObject.registerClass(
             return tilingModeEnabled && (activeWorkspaceTiled || currentWorkspaceTiled);
         }
 
+        get tilingModeEnabled() {
+            return this.ext.settings.get_boolean("tiling-mode-enabled");
+        }
+
         /**
          * Moves the pointer along with the nodeWindow's meta
          *
@@ -1710,13 +1714,11 @@ var WindowManager = GObject.registerClass(
                     }
 
                 }
+                if (focusNodeWindow.nodeValue.get_maximized() === 0) {
+                    this.renderTree("grab-op-end");
+                }
             }
             this._grabCleanup(focusNodeWindow);
-
-            if (focusMetaWindow.get_maximized() === 0) {
-                this.renderTree("grab-op-end");
-            }
-
             this.updateStackedFocus(focusNodeWindow);
             this.updateTabbedFocus(focusNodeWindow);
 

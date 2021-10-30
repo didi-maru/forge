@@ -1284,13 +1284,13 @@ var Tree = GObject.registerClass(
             }
         }
 
-        processTabbed(node, child, params, index) {
-            Logger.debug(`processing tabbed container ${node.nodeValue}`);
+        processTabbed(conNode, child, params, index) {
+            Logger.debug(`processing tabbed container ${conNode.nodeValue}`);
 
-            let layout = node.layout;
+            let layout = conNode.layout;
             Logger.debug(` layout: ${layout}`);
 
-            let nodeRect = node.rect;
+            let nodeRect = conNode.rect;
             let nodeWidth;
             let nodeHeight;
             let nodeX;
@@ -1298,7 +1298,7 @@ var Tree = GObject.registerClass(
 
             if (layout === LAYOUT_TYPES.TABBED) {
                 // Use the HSPLIT calculations
-                let tabWidth = node.rect.width / params.tiledChildren.length;
+                let tabWidth = conNode.rect.width / params.tiledChildren.length;
                 nodeWidth = tabWidth;
                 nodeHeight = nodeRect.height;
                 nodeX = nodeRect.x;
@@ -1311,18 +1311,17 @@ var Tree = GObject.registerClass(
                 }
                 nodeY = nodeRect.y;
                 child.backgroundTab = true;
-                this.cleanupBeforeProcess(child);
 
-                let tiledChildren = node.getNodeByType(NODE_TYPES.WINDOW)
+                let tiledChildren = conNode.getNodeByType(NODE_TYPES.WINDOW)
                     .filter((t) => t.mode === Window.WINDOW_MODES.TILE &&
                         !t.nodeValue.minimized);
 
                 if (tiledChildren.length > 1 &&
                     (child.nodeValue === this.extWm.focusMetaWindow ||
-                        node.lastTabFocus &&
-                        node.lastTabFocus === child.nodeValue) &&
-                        node.mode !== Window.WINDOW_MODES.FLOAT) {
-                    child.rect = this.renderFrontTab(node, child, params.stackedHeight)
+                        conNode.lastTabFocus &&
+                        conNode.lastTabFocus === child.nodeValue) &&
+                        child.mode !== Window.WINDOW_MODES.FLOAT) {
+                    child.rect = this.renderFrontTab(conNode, child, params.stackedHeight)
                 } else {
                     if (tiledChildren.length === 1) {
                         child.backgroundTab = false;
@@ -1382,9 +1381,11 @@ var Tree = GObject.registerClass(
                                 // Most apps tested do not set transient parents on their modal dialogs
                                 // So this is likely fixed when TABBED tabs are changed to St.Widget
                                 let child = tabbedWindows[tabbedWindows.length - 1]; // for now pick the last child
-                                let tabRect = this.renderFrontTab(con, child, 35);
-                                child.rect = tabRect;
-                                child.renderRect = this.processGap(child);
+                                if (child) {
+                                    let tabRect = this.renderFrontTab(con, child, 35);
+                                    child.rect = tabRect;
+                                    child.renderRect = this.processGap(child);
+                                }
                             }
                         }
                     }
@@ -1398,14 +1399,16 @@ var Tree = GObject.registerClass(
             // Windows on tabs
             // Windows on stacks
             // Tiled windows
-            const allWindowsActiveWorkspace = this.extWm.windowsActiveWorkspace;
-            allWindowsActiveWorkspace.sort((n1, n2) => {
-                return this.getSortIndex(n1) - this.getSortIndex(n2);
-            });
+            if (this.extWm.tilingEnabled) {
+                const allWindowsActiveWorkspace = this.extWm.windowsActiveWorkspace;
+                allWindowsActiveWorkspace.sort((n1, n2) => {
+                    return this.getSortIndex(n1) - this.getSortIndex(n2);
+                });
 
-            allWindowsActiveWorkspace.forEach((w) => {
-                w.nodeValue.raise();
-            });
+                allWindowsActiveWorkspace.forEach((w) => {
+                    w.nodeValue.raise();
+                });
+            }
         }
 
         getSortIndex(nodeWindow) {
@@ -1431,6 +1434,7 @@ var Tree = GObject.registerClass(
          * Apply tab rect calculations to the non-background tab
          */
         renderFrontTab(node, child, stackedHeight) {
+            if (!(node && child)) return node.rect;
             let nodeY = node.rect.y + stackedHeight;
             let nodeHeight = node.rect.height - stackedHeight;
             let nodeX = node.rect.x;
@@ -1460,9 +1464,10 @@ var Tree = GObject.registerClass(
             if (child.nodeType === NODE_TYPES.WINDOW) {
                 let focusNodeWindow = this.findNode(this.extWm.focusMetaWindow);
                 if (focusNodeWindow) {
-                    if (child !== focusNodeWindow)
+                    if (child !== focusNodeWindow && !child.parentNode.isTabbedLayout()) {
                         child.nodeValue.unmake_above();
-                    child.nodeValue.lower();
+                        child.nodeValue.lower();
+                    }
                 }
             }
         }

@@ -349,8 +349,10 @@ var WindowManager = GObject.registerClass(
 
             switch(action.name) {
                 case "FloatToggle":
+                case "AlwaysFloatToggle":
 
-                    this.toggleFloatingMode(action, focusWindow)
+                    this.toggleFloatingMode(action, focusWindow);
+
                     const rectRequest = {
                         x: action.x,
                         y: action.y,

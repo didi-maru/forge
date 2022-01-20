@@ -57,6 +57,15 @@ var GRAB_TYPES = Utils.createEnum([
     "UNKNOWN"
 ]);
 
+var KNOWN_FLOATS = [
+    {
+        title: "Forge Settings"
+    },
+    {
+        title: "Paramètres"
+    }
+]
+
 var WindowManager = GObject.registerClass(
     class WindowManager extends GObject.Object {
         _init(ext) {
@@ -2165,11 +2174,7 @@ var WindowManager = GObject.registerClass(
             if (!windowTitle || windowTitle === "" || windowTitle.length === 0) return false;
 
             if (!this.knownFloats) {
-                this.knownFloats = [
-                    {
-                        title: "Forge Settings"
-                    }
-                ]
+                this.knownFloats = KNOWN_FLOATS
             }
 
             const knownFloats = this.knownFloats;
